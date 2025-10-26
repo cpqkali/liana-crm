@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server"
 import type { NextRequest } from "next/server"
-import { verifyAuthToken } from "@/lib/auth"
+import { verifyAuthTokenFormat } from "@/lib/auth-edge"
 
 export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl
@@ -9,19 +9,21 @@ export async function middleware(request: NextRequest) {
     return NextResponse.next()
   }
 
-  const authToken = request.cookies.get("authToken")?.value
+  const authToken = request.cookies.get("authToken")?.value || request.cookies.get("auth_token")?.value
 
+  // If no token, redirect to login
   if (!authToken) {
     const loginUrl = new URL("/", request.url)
     return NextResponse.redirect(loginUrl)
   }
 
-  const tokenData = verifyAuthToken(authToken)
+  const tokenData = await verifyAuthTokenFormat(authToken)
 
   if (!tokenData) {
     const loginUrl = new URL("/", request.url)
     const response = NextResponse.redirect(loginUrl)
     response.cookies.delete("authToken")
+    response.cookies.delete("auth_token")
     return response
   }
 

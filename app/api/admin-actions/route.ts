@@ -1,7 +1,15 @@
 import { type NextRequest, NextResponse } from "next/server"
 import { getDataStore } from "@/lib/data-store"
+import { verifyAuth } from "@/lib/auth"
+
+export const runtime = "nodejs"
 
 export async function POST(request: NextRequest) {
+  const authResult = await verifyAuth(request)
+  if (!authResult.authenticated || !authResult.user) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
+  }
+
   try {
     const data = await request.json()
     const { adminUsername, action, details } = data
@@ -29,6 +37,11 @@ export async function POST(request: NextRequest) {
 }
 
 export async function GET(request: NextRequest) {
+  const authResult = await verifyAuth(request)
+  if (!authResult.authenticated || !authResult.user) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
+  }
+
   try {
     const { searchParams } = new URL(request.url)
     const username = searchParams.get("username")
@@ -36,7 +49,7 @@ export async function GET(request: NextRequest) {
     const dataStore = getDataStore()
     const actions = username ? dataStore.getAdminActions(username) : dataStore.getAdminActions()
 
-    return NextResponse.json(actions)
+    return NextResponse.json({ actions })
   } catch (error) {
     console.error("[v0] Get admin actions error:", error)
     return NextResponse.json({ error: "Ошибка сервера" }, { status: 500 })

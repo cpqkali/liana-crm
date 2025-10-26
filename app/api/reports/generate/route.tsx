@@ -2,6 +2,8 @@ import { type NextRequest, NextResponse } from "next/server"
 import { getClients, getObjects, getTransactions } from "@/lib/db-helpers"
 import { formatPriceDetailed } from "@/lib/format"
 
+export const runtime = "nodejs"
+
 export async function GET(request: NextRequest) {
   try {
     const [clients, objects, transactions] = await Promise.all([getClients(), getObjects(), getTransactions()])

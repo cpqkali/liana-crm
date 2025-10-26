@@ -1,6 +1,8 @@
 import { type NextRequest, NextResponse } from "next/server"
 import { getObjectsByOwnerId } from "@/lib/db-helpers"
 
+export const runtime = "nodejs"
+
 export async function GET(request: NextRequest, { params }: { params: { id: string } }) {
   try {
     const objects = await getObjectsByOwnerId(Number.parseInt(params.id))

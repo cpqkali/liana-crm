@@ -10,17 +10,17 @@ import { Card, CardContent, CardHeader, CardDescription } from "@/components/ui/
 import Image from "next/image"
 import { toast } from "sonner"
 import { ThemeToggle } from "@/components/theme-toggle"
+import { useRouter } from "next/navigation"
 
 export default function LoginPage() {
   const [username, setUsername] = useState("")
   const [password, setPassword] = useState("")
   const [isSubmitting, setIsSubmitting] = useState(false)
+  const router = useRouter()
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault()
     setIsSubmitting(true)
-
-    console.log("[v0] Starting login attempt for:", username)
 
     try {
       const response = await fetch("/api/auth/login", {
@@ -32,28 +32,20 @@ export default function LoginPage() {
         body: JSON.stringify({ username, password }),
       })
 
-      console.log("[v0] Login response status:", response.status)
-
       if (!response.ok) {
         const data = await response.json().catch(() => ({ error: "Ошибка сервера" }))
-        console.log("[v0] Login failed:", data.error)
         toast.error(data.error || "Неверное имя пользователя или пароль")
         setIsSubmitting(false)
         return
       }
 
       const data = await response.json()
-      console.log("[v0] Login successful, received data:", data)
-
-      localStorage.setItem("username", data.username)
-      localStorage.setItem("adminName", data.name)
 
       toast.success("Вход выполнен успешно")
 
-      console.log("[v0] Redirecting to /home")
-      window.location.href = "/home"
+      router.push("/home")
+      router.refresh()
     } catch (error) {
-      console.error("[v0] Login error:", error)
       toast.error("Ошибка подключения к серверу")
       setIsSubmitting(false)
     }

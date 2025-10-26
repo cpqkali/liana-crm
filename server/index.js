@@ -13,11 +13,29 @@ const __dirname = path.dirname(__filename)
 
 const app = express()
 const PORT = process.env.PORT || 8000
+
+if (process.env.NODE_ENV === "production" && !process.env.JWT_SECRET) {
+  console.error("FATAL ERROR: JWT_SECRET environment variable is not set in production!")
+  process.exit(1)
+}
 const JWT_SECRET = process.env.JWT_SECRET || "liana-secret-key-change-in-production"
+
+const allowedOrigins = process.env.FRONTEND_URL
+  ? process.env.FRONTEND_URL.split(",").map((url) => url.trim())
+  : ["http://localhost:3000"]
 
 app.use(
   cors({
-    origin: process.env.FRONTEND_URL || "http://localhost:3000",
+    origin: (origin, callback) => {
+      // Allow requests with no origin (like mobile apps or curl requests)
+      if (!origin) return callback(null, true)
+
+      if (allowedOrigins.includes(origin) || allowedOrigins.includes("*")) {
+        callback(null, true)
+      } else {
+        callback(new Error("Not allowed by CORS"))
+      }
+    },
     credentials: true,
     methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
     allowedHeaders: ["Content-Type", "Authorization"],
@@ -42,8 +60,11 @@ if (!fs.existsSync(databasesDir)) {
   fs.mkdirSync(databasesDir, { recursive: true })
 }
 
+const dbPath = process.env.DATABASE_PATH || path.join(__dirname, "database.sqlite")
+console.log(`Using database at: ${dbPath}`)
+
 // Database setup with better error handling
-const db = new sqlite3.Database("./database.sqlite", (err) => {
+const db = new sqlite3.Database(dbPath, (err) => {
   if (err) {
     console.error("Error opening database:", err)
     process.exit(1)
@@ -1008,8 +1029,10 @@ app.delete("/api/clients/:id", async (req, res) => {
 })
 
 // Start server
-app.listen(PORT, () => {
-  console.log(`Server running on http://localhost:${PORT}`)
+app.listen(PORT, "0.0.0.0", () => {
+  const serverUrl = process.env.RENDER_EXTERNAL_URL || `http://localhost:${PORT}`
+  console.log(`Server running on port ${PORT}`)
+  console.log(`Access at: ${serverUrl}`)
 })
 
 // Graceful shutdown

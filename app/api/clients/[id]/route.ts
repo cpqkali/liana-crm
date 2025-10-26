@@ -2,6 +2,8 @@ import { type NextRequest, NextResponse } from "next/server"
 import { getClientById, updateClient, deleteClient } from "@/lib/db-helpers"
 import { getDataStore } from "@/lib/data-store"
 
+export const runtime = "nodejs"
+
 export async function GET(request: NextRequest, { params }: { params: { id: string } }) {
   try {
     const client = await getClientById(Number.parseInt(params.id))

@@ -32,11 +32,20 @@ export default function ProfilePage() {
   const [isSubmitting, setIsSubmitting] = useState(false)
 
   useEffect(() => {
-    const storedUsername = localStorage.getItem("username")
-    if (storedUsername) {
-      setCurrentUsername(storedUsername)
-      setNewUsername(storedUsername)
-    }
+    // Fetch current user from API
+    fetch("/api/auth/verify", {
+      credentials: "include",
+    })
+      .then((res) => res.json())
+      .then((data) => {
+        if (data.authenticated && data.username) {
+          setCurrentUsername(data.username)
+          setNewUsername(data.username)
+        }
+      })
+      .catch(() => {
+        toast.error("Ошибка загрузки профиля")
+      })
   }, [])
 
   const handleUpdateProfile = async (e: React.FormEvent) => {
@@ -44,13 +53,12 @@ export default function ProfilePage() {
     setIsSubmitting(true)
 
     try {
-      const token = localStorage.getItem("authToken")
       const response = await fetch("/api/auth/update-profile", {
         method: "PUT",
         headers: {
           "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`,
         },
+        credentials: "include",
         body: JSON.stringify({
           currentUsername,
           newUsername,
@@ -62,10 +70,6 @@ export default function ProfilePage() {
       const data = await response.json()
 
       if (response.ok) {
-        localStorage.setItem("username", newUsername)
-        if (data.token) {
-          localStorage.setItem("authToken", data.token)
-        }
         setCurrentUsername(newUsername)
         setCurrentPassword("")
         setNewPassword("")
@@ -82,15 +86,19 @@ export default function ProfilePage() {
     }
   }
 
-  const handleClearDatabase = () => {
+  const handleClearDatabase = async () => {
     try {
-      localStorage.removeItem("crm_properties")
-      localStorage.removeItem("crm_clients")
-      localStorage.removeItem("crm_showings")
-      localStorage.removeItem("crm_admin_actions")
-      toast.success("База данных успешно очищена")
-      // Reload page to reflect changes
-      window.location.reload()
+      const response = await fetch("/api/admin/clear-database", {
+        method: "POST",
+        credentials: "include",
+      })
+
+      if (response.ok) {
+        toast.success("База данных успешно очищена")
+        window.location.reload()
+      } else {
+        toast.error("Ошибка при очистке базы данных")
+      }
     } catch (error) {
       console.error("[v0] Clear database error:", error)
       toast.error("Ошибка при очистке базы данных")

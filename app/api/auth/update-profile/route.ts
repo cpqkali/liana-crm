@@ -1,6 +1,8 @@
 import { type NextRequest, NextResponse } from "next/server"
 import { getDataStore } from "@/lib/data-store"
 
+export const runtime = "nodejs"
+
 export async function PUT(request: NextRequest) {
   try {
     const { username, fullName, email, currentPassword, newPassword } = await request.json()

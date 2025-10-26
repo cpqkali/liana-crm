@@ -1,3 +1,4 @@
+import "server-only"
 import { getDb } from "./db"
 import type { Admin, Client, PropertyObject, Showing, Transaction } from "./db"
 

@@ -1,11 +1,17 @@
+import "server-only"
 import Database from "better-sqlite3"
 import { join } from "path"
+
+if (process.env.NODE_ENV === "production" && !process.env.DATABASE_PATH) {
+  console.warn("WARNING: DATABASE_PATH not set. Using default path. Data may be lost on redeploy!")
+}
 
 let db: Database.Database | null = null
 
 export function getDb() {
   if (!db) {
     const dbPath = process.env.DATABASE_PATH || join(process.cwd(), "database.sqlite")
+    console.log(`[DB] Using database at: ${dbPath}`)
     db = new Database(dbPath)
 
     // Enable WAL mode for better concurrent access
@@ -109,12 +115,11 @@ function initializeSchema() {
     )
   `)
 
-  // Create indexes for better performance
+  // Create indexes for better performance on CRM tables
   db.exec(`
-    CREATE INDEX IF NOT EXISTS idx_clients_call_status ON clients(call_status);
-    CREATE INDEX IF NOT EXISTS idx_clients_waiting ON clients(waiting_for_showing);
-    CREATE INDEX IF NOT EXISTS idx_objects_status ON objects(status);
-    CREATE INDEX IF NOT EXISTS idx_showings_date ON showings(scheduled_date);
+    CREATE INDEX IF NOT EXISTS idx_crm_clients_call_status ON clients(call_status);
+    CREATE INDEX IF NOT EXISTS idx_crm_properties_status ON objects(status);
+    CREATE INDEX IF NOT EXISTS idx_crm_showings_date ON showings(scheduled_date);
   `)
 
   // Insert default admin users if they don't exist

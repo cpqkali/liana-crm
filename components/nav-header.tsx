@@ -8,7 +8,6 @@ import Image from "next/image"
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
 import { User } from "lucide-react"
 import { ThemeToggle } from "@/components/theme-toggle"
-import { removeAuthTokenFromStorage } from "@/lib/auth"
 
 export function NavHeader() {
   const [username, setUsername] = useState("")
@@ -16,10 +15,19 @@ export function NavHeader() {
   const router = useRouter()
 
   useEffect(() => {
-    const storedUsername = localStorage.getItem("username")
-    if (storedUsername) {
-      setUsername(storedUsername)
-    }
+    // Fetch username from API instead of localStorage
+    fetch("/api/auth/verify", {
+      credentials: "include",
+    })
+      .then((res) => res.json())
+      .then((data) => {
+        if (data.authenticated && data.username) {
+          setUsername(data.username)
+        }
+      })
+      .catch(() => {
+        // Ignore errors
+      })
   }, [])
 
   const handleLogout = async () => {
@@ -29,8 +37,8 @@ export function NavHeader() {
         credentials: "include",
       })
     } catch (error) {
+      // Ignore errors
     } finally {
-      removeAuthTokenFromStorage()
       router.push("/")
       router.refresh()
     }
@@ -48,7 +56,7 @@ export function NavHeader() {
                 <DropdownMenuTrigger asChild>
                   <Button variant="outline" size="sm">
                     <User className="h-4 w-4 mr-2" />
-                    {username}
+                    {username || "Пользователь"}
                   </Button>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="end">

@@ -1,6 +1,8 @@
 import { type NextRequest, NextResponse } from "next/server"
 import { getDataStore } from "@/lib/data-store"
 
+export const runtime = "nodejs"
+
 export async function GET(request: NextRequest, { params }: { params: { id: string } }) {
   try {
     const dataStore = getDataStore()

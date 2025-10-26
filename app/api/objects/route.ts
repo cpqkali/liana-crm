@@ -2,6 +2,8 @@ import { type NextRequest, NextResponse } from "next/server"
 import { getDataStore } from "@/lib/data-store"
 import { validatePropertyForm } from "@/lib/validation"
 
+export const runtime = "nodejs"
+
 export async function GET() {
   try {
     const dataStore = getDataStore()
@@ -23,8 +25,8 @@ export async function POST(request: NextRequest) {
       price: data.price?.toString() || "",
       area: data.area?.toString() || "",
       status: data.status,
-      owner: data.owner,
-      ownerPhone: data.ownerPhone,
+      owner: data.owner || "",
+      ownerPhone: data.ownerPhone || "",
     })
 
     if (!validation.valid) {
@@ -40,6 +42,8 @@ export async function POST(request: NextRequest) {
 
     const newProperty = dataStore.createProperty({
       ...data,
+      owner: data.owner || "",
+      ownerPhone: data.ownerPhone || "",
       photos: data.photos || [],
     })
 

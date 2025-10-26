@@ -6,9 +6,10 @@
   "scripts": {
     "build": "next build",
     "dev": "concurrently \"next dev\" \"node server/index.js\"",
+    "postinstall": "npm rebuild better-sqlite3",
     "lint": "eslint .",
     "server": "node server/index.js",
-    "start": "next start"
+    "start": "concurrently \"next start\" \"node server/index.js\""
   },
   "dependencies": {
     "@emotion/is-prop-valid": "latest",
@@ -70,6 +71,7 @@
     "react-hook-form": "latest",
     "react-resizable-panels": "latest",
     "recharts": "latest",
+    "server-only": "latest",
     "sonner": "latest",
     "sqlite3": "latest",
     "tailwind-merge": "^2.5.5",

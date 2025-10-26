@@ -1,6 +1,8 @@
 import { NextResponse } from "next/server"
 import { getDataStore } from "@/lib/data-store"
 
+export const runtime = "nodejs"
+
 export async function GET() {
   try {
     const dataStore = getDataStore()

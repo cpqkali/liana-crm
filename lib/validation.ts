@@ -23,16 +23,6 @@ export function validatePropertyForm(formData: {
     return { valid: false, error: "Площадь должна быть больше 0" }
   }
 
-  if (formData.status !== "available") {
-    if (!formData.owner?.trim()) {
-      return { valid: false, error: "ФИО собственника обязательно" }
-    }
-
-    if (!formData.ownerPhone?.trim()) {
-      return { valid: false, error: "Телефон собственника обязателен" }
-    }
-  }
-
   return { valid: true }
 }
 

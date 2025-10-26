@@ -6,7 +6,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Label } from "@/components/ui/label"
 import { Badge } from "@/components/ui/badge"
 import { ScrollArea } from "@/components/ui/scroll-area"
-import { getDataStore, type AdminAction } from "@/lib/data-store"
+import type { AdminAction } from "@/lib/data-store"
 import { ArrowLeftIcon } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { useRouter } from "next/navigation"
@@ -16,21 +16,43 @@ export default function AdminHistoryPage() {
   const [adminUsernames, setAdminUsernames] = useState<string[]>([])
   const [selectedAdmin, setSelectedAdmin] = useState<string>("all")
   const [actions, setActions] = useState<AdminAction[]>([])
+  const [loading, setLoading] = useState(true)
 
   useEffect(() => {
     loadData()
   }, [selectedAdmin])
 
-  const loadData = () => {
-    const dataStore = getDataStore()
-    const usernames = dataStore.getAllAdminUsernames()
-    setAdminUsernames(usernames)
+  const loadData = async () => {
+    setLoading(true)
+    try {
+      // Fetch admin usernames
+      const usernamesResponse = await fetch("/api/admin-actions/usernames")
+      if (usernamesResponse.ok) {
+        const { usernames } = await usernamesResponse.json()
+        setAdminUsernames(usernames)
+      }
 
-    const allActions = selectedAdmin === "all" ? dataStore.getAdminActions() : dataStore.getAdminActions(selectedAdmin)
+      // Fetch actions
+      const url =
+        selectedAdmin === "all"
+          ? "/api/admin-actions"
+          : `/api/admin-actions?username=${encodeURIComponent(selectedAdmin)}`
 
-    // Sort by timestamp descending (newest first)
-    allActions.sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime())
-    setActions(allActions)
+      const actionsResponse = await fetch(url)
+      if (actionsResponse.ok) {
+        const { actions: allActions } = await actionsResponse.json()
+
+        // Sort by timestamp descending (newest first)
+        allActions.sort(
+          (a: AdminAction, b: AdminAction) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime(),
+        )
+        setActions(allActions)
+      }
+    } catch (error) {
+      console.error("Error loading data:", error)
+    } finally {
+      setLoading(false)
+    }
   }
 
   const formatDate = (timestamp: string) => {
@@ -96,7 +118,11 @@ export default function AdminHistoryPage() {
           <CardTitle>История действий {selectedAdmin !== "all" && `- ${selectedAdmin}`}</CardTitle>
         </CardHeader>
         <CardContent>
-          {actions.length === 0 ? (
+          {loading ? (
+            <div className="text-center py-12 text-muted-foreground">
+              <p>Загрузка...</p>
+            </div>
+          ) : actions.length === 0 ? (
             <div className="text-center py-12 text-muted-foreground">
               <p>История действий пуста</p>
               <p className="text-sm mt-1">Действия администраторов будут отображаться здесь</p>
