@@ -4,7 +4,7 @@ import { useState, useEffect } from "react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { BuildingIcon, UsersIcon, CalendarIcon, TrendingUpIcon } from "lucide-react"
-import type { Property, Client, Showing } from "@/lib/data-store"
+import type { Property, Client, Showing } from "@/lib/db"
 
 interface DashboardStatsProps {
   properties: Property[]

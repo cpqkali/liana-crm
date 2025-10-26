@@ -11,7 +11,7 @@ export async function POST(request: NextRequest) {
     const { username, password } = await request.json()
 
     if (!username || !password) {
-      return NextResponse.json({ error: "Имя пользователя и пароль обязательны" }, { status: 400 })
+      return NextResponse.json({ error: "Username and password required" }, { status: 400 })
     }
 
     const user = await prisma.user.findUnique({
@@ -19,13 +19,13 @@ export async function POST(request: NextRequest) {
     })
 
     if (!user) {
-      return NextResponse.json({ error: "Неверное имя пользователя или пароль" }, { status: 401 })
+      return NextResponse.json({ error: "Invalid credentials" }, { status: 401 })
     }
 
     const isValidPassword = await bcryptjs.compare(password, user.password)
 
     if (!isValidPassword) {
-      return NextResponse.json({ error: "Неверное имя пользователя или пароль" }, { status: 401 })
+      return NextResponse.json({ error: "Invalid credentials" }, { status: 401 })
     }
 
     const token = createAuthToken(user.id, user.username)
@@ -37,24 +37,12 @@ export async function POST(request: NextRequest) {
       ipAddress: request.headers.get("x-forwarded-for") || request.headers.get("x-real-ip") || "Unknown",
     })
 
-    const response = NextResponse.json({
-      success: true,
+    return NextResponse.json({
       token,
-      username: user.username,
-      name: user.username,
+      user: { id: user.id, username: user.username },
     })
-
-    response.cookies.set("authToken", token, {
-      httpOnly: true,
-      secure: process.env.NODE_ENV === "production",
-      sameSite: "lax",
-      maxAge: 60 * 60 * 24 * 7, // 7 days
-      path: "/",
-    })
-
-    return response
   } catch (error) {
     console.error("[v0] Login error:", error)
-    return NextResponse.json({ error: "Ошибка сервера" }, { status: 500 })
+    return NextResponse.json({ error: "Server error" }, { status: 500 })
   }
 }

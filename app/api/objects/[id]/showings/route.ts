@@ -1,12 +1,14 @@
 import { type NextRequest, NextResponse } from "next/server"
-import { getDataStore } from "@/lib/data-store"
+import { prisma } from "@/lib/prisma"
 
 export const runtime = "nodejs"
 
 export async function GET(request: NextRequest, { params }: { params: { id: string } }) {
   try {
-    const dataStore = getDataStore()
-    const showings = dataStore.getShowingsByObject(params.id)
+    const showings = await prisma.showing.findMany({
+      where: { objectId: params.id },
+      orderBy: [{ date: "asc" }, { time: "asc" }],
+    })
     return NextResponse.json(showings)
   } catch (error) {
     console.error("[v0] Get showings error:", error)
@@ -22,18 +24,24 @@ export async function POST(request: NextRequest, { params }: { params: { id: str
       return NextResponse.json({ error: "Дата и время обязательны" }, { status: 400 })
     }
 
-    const dataStore = getDataStore()
-    const property = dataStore.getProperty(params.id)
+    const property = await prisma.object.findUnique({
+      where: { id: params.id },
+    })
 
     if (!property) {
       return NextResponse.json({ error: "Объект не найден" }, { status: 404 })
     }
 
-    const newShowing = dataStore.createShowing({
-      objectId: params.id,
-      date: data.date,
-      time: data.time,
-      notes: data.notes || "",
+    const showingId = `SHW-${Date.now()}`
+
+    const newShowing = await prisma.showing.create({
+      data: {
+        id: showingId,
+        objectId: params.id,
+        date: data.date,
+        time: data.time,
+        notes: data.notes || null,
+      },
     })
 
     return NextResponse.json(newShowing, { status: 201 })

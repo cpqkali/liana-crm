@@ -14,7 +14,7 @@ import { Switch } from "@/components/ui/switch"
 import { Badge } from "@/components/ui/badge"
 import { toast } from "sonner"
 import { PlusIcon, XIcon, ImageIcon, TrashIcon } from "lucide-react"
-import type { Client } from "@/lib/data-store"
+import type { Client } from "@/lib/db"
 
 interface PropertyFormProps {
   initialData?: {

@@ -1,135 +1,84 @@
 import "server-only"
-import Database from "better-sqlite3"
-import { join } from "path"
+import { prisma } from "./prisma"
+import bcryptjs from "bcryptjs"
 
-if (process.env.NODE_ENV === "production" && !process.env.DATABASE_PATH) {
-  console.warn("WARNING: DATABASE_PATH not set. Using default path. Data may be lost on redeploy!")
+if (process.env.NODE_ENV === "production" && !process.env.DATABASE_URL) {
+  console.warn("WARNING: DATABASE_URL not set. Using default connection.")
 }
 
-let db: Database.Database | null = null
-
-export function getDb() {
-  if (!db) {
-    const dbPath = process.env.DATABASE_PATH || join(process.cwd(), "database.sqlite")
-    console.log(`[DB] Using database at: ${dbPath}`)
-    db = new Database(dbPath)
-
-    // Enable WAL mode for better concurrent access
-    db.pragma("journal_mode = WAL")
-
-    // Initialize database schema
-    initializeSchema()
-  }
-  return db
+export async function getDb() {
+  return prisma
 }
 
-function initializeSchema() {
-  const db = getDb()
+export async function initializeSchema() {
+  // Schema is now managed by Prisma migrations
+  // Check if default users exist
+  const adminCount = await prisma.user.count()
 
-  // Create admins table
-  db.exec(`
-    CREATE TABLE IF NOT EXISTS admins (
-      id INTEGER PRIMARY KEY AUTOINCREMENT,
-      username TEXT UNIQUE NOT NULL,
-      password TEXT NOT NULL,
-      name TEXT NOT NULL,
-      created_at DATETIME DEFAULT CURRENT_TIMESTAMP
-    )
-  `)
+  if (adminCount === 0) {
+    const hashedAdmin = await bcryptjs.hash("admin123", 10)
+    const hashedElena = await bcryptjs.hash("12345", 10)
+    const hashedAnna = await bcryptjs.hash("09876", 10)
 
-  // Create clients table
-  db.exec(`
-    CREATE TABLE IF NOT EXISTS clients (
-      id INTEGER PRIMARY KEY AUTOINCREMENT,
-      name TEXT NOT NULL,
-      phone TEXT NOT NULL,
-      birth_date DATE,
-      additional_phones TEXT,
-      notes TEXT,
-      call_status TEXT DEFAULT 'not_called' CHECK(call_status IN ('called', 'not_called')),
-      call_notes TEXT,
-      is_hidden INTEGER DEFAULT 0,
-      waiting_for_showing INTEGER DEFAULT 0,
-      date_added DATE NOT NULL,
-      created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-      updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
-    )
-  `)
-
-  // Create objects table
-  db.exec(`
-    CREATE TABLE IF NOT EXISTS objects (
-      id INTEGER PRIMARY KEY AUTOINCREMENT,
-      address TEXT NOT NULL,
-      district TEXT,
-      rooms INTEGER NOT NULL,
-      area REAL NOT NULL,
-      floor INTEGER,
-      total_floors INTEGER,
-      price INTEGER NOT NULL,
-      description TEXT,
-      owner_id INTEGER,
-      buyer_id INTEGER,
-      status TEXT DEFAULT 'available' CHECK(status IN ('available', 'sold', 'has_candidates')),
-      photos TEXT,
-      created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-      updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-      FOREIGN KEY (owner_id) REFERENCES clients(id) ON DELETE SET NULL,
-      FOREIGN KEY (buyer_id) REFERENCES clients(id) ON DELETE SET NULL
-    )
-  `)
-
-  // Create showings table
-  db.exec(`
-    CREATE TABLE IF NOT EXISTS showings (
-      id INTEGER PRIMARY KEY AUTOINCREMENT,
-      object_id INTEGER NOT NULL,
-      client_id INTEGER NOT NULL,
-      admin_id INTEGER,
-      scheduled_date DATETIME NOT NULL,
-      status TEXT DEFAULT 'scheduled' CHECK(status IN ('scheduled', 'completed', 'cancelled')),
-      notes TEXT,
-      created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-      updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-      FOREIGN KEY (object_id) REFERENCES objects(id) ON DELETE CASCADE,
-      FOREIGN KEY (client_id) REFERENCES clients(id) ON DELETE CASCADE,
-      FOREIGN KEY (admin_id) REFERENCES admins(id) ON DELETE SET NULL
-    )
-  `)
-
-  // Create transactions table
-  db.exec(`
-    CREATE TABLE IF NOT EXISTS transactions (
-      id INTEGER PRIMARY KEY AUTOINCREMENT,
-      type TEXT NOT NULL CHECK(type IN ('income', 'expense')),
-      amount INTEGER NOT NULL,
-      description TEXT,
-      client_id INTEGER,
-      object_id INTEGER,
-      admin_id INTEGER,
-      transaction_date DATE NOT NULL,
-      created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-      FOREIGN KEY (client_id) REFERENCES clients(id) ON DELETE SET NULL,
-      FOREIGN KEY (object_id) REFERENCES objects(id) ON DELETE SET NULL,
-      FOREIGN KEY (admin_id) REFERENCES admins(id) ON DELETE SET NULL
-    )
-  `)
-
-  // Create indexes for better performance on CRM tables
-  db.exec(`
-    CREATE INDEX IF NOT EXISTS idx_crm_clients_call_status ON clients(call_status);
-    CREATE INDEX IF NOT EXISTS idx_crm_properties_status ON objects(status);
-    CREATE INDEX IF NOT EXISTS idx_crm_showings_date ON showings(scheduled_date);
-  `)
-
-  // Insert default admin users if they don't exist
-  const adminCount = db.prepare("SELECT COUNT(*) as count FROM admins").get() as { count: number }
-  if (adminCount.count === 0) {
-    const insertAdmin = db.prepare("INSERT INTO admins (username, password, name) VALUES (?, ?, ?)")
-    insertAdmin.run("admin", "admin123", "Администратор")
-    insertAdmin.run("Elena", "12345", "Елена")
-    insertAdmin.run("Anna", "09876", "Анна")
+    // Insert default admin users
+    await prisma.user.createMany({
+      data: [
+        {
+          username: "admin",
+          password: hashedAdmin,
+        },
+        {
+          username: "Elena",
+          password: hashedElena,
+        },
+        {
+          username: "Anna",
+          password: hashedAnna,
+        },
+      ],
+    })
   }
+}
+
+export async function logAdminAction(data: {
+  adminUsername: string
+  action: string
+  details: string
+  ipAddress: string
+}) {
+  const id = `ACT-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`
+
+  return await prisma.adminAction.create({
+    data: {
+      id,
+      adminUsername: data.adminUsername,
+      action: data.action,
+      details: data.details,
+      ipAddress: data.ipAddress,
+    },
+  })
+}
+
+export async function getAdminActions(username?: string) {
+  if (username) {
+    return await prisma.adminAction.findMany({
+      where: { adminUsername: username },
+      orderBy: { timestamp: "desc" },
+    })
+  }
+
+  return await prisma.adminAction.findMany({
+    orderBy: { timestamp: "desc" },
+  })
+}
+
+export async function getAllAdminUsernames() {
+  const actions = await prisma.adminAction.findMany({
+    select: { adminUsername: true },
+    distinct: ["adminUsername"],
+  })
+
+  return actions.map((a) => a.adminUsername)
 }
 
 // Helper function to format price
@@ -140,73 +89,90 @@ export function formatPrice(price: number): string {
   return price.toLocaleString("ru-RU")
 }
 
-// Types
 export interface Admin {
   id: number
   username: string
-  name: string
-  created_at: Date
+  createdAt: Date
 }
 
 export interface Client {
-  id: number
+  id: string
   name: string
   phone: string
-  birth_date?: Date
-  additional_phones?: string[]
-  notes?: string
-  call_status: "called" | "not_called"
-  call_notes?: string
-  is_hidden: boolean
-  waiting_for_showing: boolean
-  date_added: Date
-  created_at: Date
-  updated_at: Date
+  callStatus: string
+  type: string
+  status: string
+  budget?: string | null
+  notes?: string | null
+  createdAt: Date
+  updatedAt: Date
+}
+
+export interface Property {
+  id: string
+  address: string
+  type: string
+  status: string
+  price: number
+  area: number
+  rooms?: number | null
+  floor?: number | null
+  totalFloors?: number | null
+  owner?: string | null
+  ownerPhone?: string | null
+  ownerEmail?: string | null
+  description?: string | null
+  inventory?: string | null
+  hasFurniture: boolean
+  photos?: string[]
+  district?: string | null
+  notes?: string | null
+  tags?: string[]
+  createdAt: Date | string
+  updatedAt?: Date | string
 }
 
 export interface PropertyObject {
-  id: number
+  id: string
   address: string
-  district?: string
-  rooms: number
+  district?: string | null
+  rooms?: number | null
   area: number
-  floor?: number
-  total_floors?: number
+  floor?: number | null
+  totalFloors?: number | null
   price: number
-  description?: string
-  owner_id?: number
-  buyer_id?: number
-  status: "available" | "sold" | "has_candidates"
-  photos?: string[]
-  created_at: Date
-  updated_at: Date
-  owner?: Client
-  buyer?: Client
+  description?: string | null
+  owner?: string | null
+  ownerPhone?: string | null
+  status: string
+  photos?: string | null
+  createdAt: Date
+  updatedAt: Date
 }
 
 export interface Showing {
-  id: number
-  object_id: number
-  client_id: number
-  admin_id?: number
-  scheduled_date: Date
-  status: "scheduled" | "completed" | "cancelled"
-  notes?: string
-  created_at: Date
-  updated_at: Date
-  object?: PropertyObject
-  client?: Client
-  admin?: Admin
+  id: string
+  objectId: string
+  date: string
+  time: string
+  notes?: string | null
+  createdAt: Date
 }
 
 export interface Transaction {
-  id: number
+  id: string
   type: "income" | "expense"
   amount: number
-  description?: string
-  client_id?: number
-  object_id?: number
-  admin_id?: number
-  transaction_date: Date
-  created_at: Date
+  description?: string | null
+  transactionDate: Date
+  createdAt: Date
+}
+
+export interface AdminAction {
+  id: string
+  adminUsername: string
+  action: string
+  details: string
+  ipAddress: string
+  timestamp: Date
 }

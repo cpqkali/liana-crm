@@ -1,0 +1,82 @@
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+model User {
+  id        Int      @id @default(autoincrement())
+  username  String   @unique
+  password  String
+  createdAt DateTime @default(now()) @map("created_at")
+
+  @@map("users")
+}
+
+model Object {
+  id           String    @id
+  address      String
+  type         String
+  status       String
+  price        Int
+  area         Float
+  rooms        Int?
+  floor        Int?
+  totalFloors  Int?      @map("total_floors")
+  owner        String?
+  ownerPhone   String?   @map("owner_phone")
+  ownerEmail   String?   @map("owner_email")
+  description  String?
+  inventory    String?
+  hasFurniture Boolean   @default(false) @map("has_furniture")
+  photos       String?
+  district     String?
+  notes        String?
+  tags         String?
+  createdAt    DateTime  @default(now()) @map("created_at")
+  updatedAt    DateTime  @updatedAt @map("updated_at")
+  showings     Showing[]
+
+  @@map("objects")
+}
+
+model Showing {
+  id        String   @id
+  objectId  String   @map("object_id")
+  date      String
+  time      String
+  notes     String?
+  createdAt DateTime @default(now()) @map("created_at")
+  object    Object   @relation(fields: [objectId], references: [id], onDelete: Cascade)
+
+  @@map("showings")
+}
+
+model Client {
+  id         String   @id
+  name       String
+  phone      String
+  callStatus String   @default("not_called") @map("call_status")
+  type       String
+  status     String
+  budget     String?
+  notes      String?
+  createdAt  DateTime @default(now()) @map("created_at")
+  updatedAt  DateTime @updatedAt @map("updated_at")
+
+  @@map("clients")
+}
+
+model AdminAction {
+  id            String   @id
+  adminUsername String   @map("admin_username")
+  action        String
+  details       String
+  ipAddress     String   @map("ip_address")
+  timestamp     DateTime @default(now())
+
+  @@map("admin_actions")
+}

@@ -1,5 +1,5 @@
 import { type NextRequest, NextResponse } from "next/server"
-import { getDataStore } from "@/lib/data-store"
+import { prisma } from "@/lib/prisma"
 import { verifyAuthToken } from "@/lib/auth"
 
 export const runtime = "nodejs"
@@ -13,8 +13,10 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Не авторизован" }, { status: 401 })
     }
 
-    const dataStore = getDataStore()
-    dataStore.clearAllData()
+    await prisma.showing.deleteMany()
+    await prisma.object.deleteMany()
+    await prisma.client.deleteMany()
+    await prisma.adminAction.deleteMany()
 
     return NextResponse.json({ success: true, message: "База данных успешно очищена" })
   } catch (error) {

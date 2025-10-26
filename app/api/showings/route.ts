@@ -1,12 +1,13 @@
 import { NextResponse } from "next/server"
-import { getDataStore } from "@/lib/data-store"
+import { prisma } from "@/lib/prisma"
 
 export const runtime = "nodejs"
 
 export async function GET() {
   try {
-    const dataStore = getDataStore()
-    const showings = dataStore.getShowings()
+    const showings = await prisma.showing.findMany({
+      orderBy: [{ date: "asc" }, { time: "asc" }],
+    })
     return NextResponse.json(showings)
   } catch (error) {
     console.error("[v0] Get showings error:", error)

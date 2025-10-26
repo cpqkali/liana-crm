@@ -1,18 +1,20 @@
 import { type NextRequest, NextResponse } from "next/server"
-import { getDataStore } from "@/lib/data-store"
+import { prisma } from "@/lib/prisma"
 
 export const runtime = "nodejs"
 
 export async function PUT(request: NextRequest, { params }: { params: { id: string; showingId: string } }) {
   try {
     const data = await request.json()
-    const dataStore = getDataStore()
 
-    const updatedShowing = dataStore.updateShowing(params.showingId, data)
-
-    if (!updatedShowing) {
-      return NextResponse.json({ error: "Показ не найден" }, { status: 404 })
-    }
+    const updatedShowing = await prisma.showing.update({
+      where: { id: params.showingId },
+      data: {
+        date: data.date,
+        time: data.time,
+        notes: data.notes || null,
+      },
+    })
 
     return NextResponse.json(updatedShowing)
   } catch (error) {
@@ -23,12 +25,9 @@ export async function PUT(request: NextRequest, { params }: { params: { id: stri
 
 export async function DELETE(request: NextRequest, { params }: { params: { id: string; showingId: string } }) {
   try {
-    const dataStore = getDataStore()
-    const success = dataStore.deleteShowing(params.showingId)
-
-    if (!success) {
-      return NextResponse.json({ error: "Показ не найден" }, { status: 404 })
-    }
+    await prisma.showing.delete({
+      where: { id: params.showingId },
+    })
 
     return NextResponse.json({ message: "Показ успешно удален" })
   } catch (error) {

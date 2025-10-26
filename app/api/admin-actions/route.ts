@@ -1,5 +1,5 @@
 import { type NextRequest, NextResponse } from "next/server"
-import { getDataStore } from "@/lib/data-store"
+import { logAdminAction, getAdminActions } from "@/lib/db"
 import { verifyAuth } from "@/lib/auth"
 
 export const runtime = "nodejs"
@@ -21,8 +21,7 @@ export async function POST(request: NextRequest) {
     // Get IP address from request
     const ipAddress = request.headers.get("x-forwarded-for") || request.headers.get("x-real-ip") || "Unknown"
 
-    const dataStore = getDataStore()
-    const newAction = dataStore.logAdminAction({
+    const newAction = await logAdminAction({
       adminUsername,
       action,
       details,
@@ -46,8 +45,7 @@ export async function GET(request: NextRequest) {
     const { searchParams } = new URL(request.url)
     const username = searchParams.get("username")
 
-    const dataStore = getDataStore()
-    const actions = username ? dataStore.getAdminActions(username) : dataStore.getAdminActions()
+    const actions = await getAdminActions(username || undefined)
 
     return NextResponse.json({ actions })
   } catch (error) {

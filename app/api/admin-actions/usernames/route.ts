@@ -1,5 +1,5 @@
 import { type NextRequest, NextResponse } from "next/server"
-import { getDataStore } from "@/lib/data-store"
+import { getAllAdminUsernames } from "@/lib/db"
 import { verifyAuth } from "@/lib/auth"
 
 export const runtime = "nodejs"
@@ -11,8 +11,7 @@ export async function GET(request: NextRequest) {
   }
 
   try {
-    const dataStore = getDataStore()
-    const usernames = dataStore.getAllAdminUsernames()
+    const usernames = await getAllAdminUsernames()
 
     return NextResponse.json({ usernames })
   } catch (error) {

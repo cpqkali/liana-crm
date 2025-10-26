@@ -12,7 +12,7 @@ import { use } from "react"
 import { ShowingsTab } from "@/components/showings-tab"
 import { toast } from "sonner"
 import { deleteObject } from "@/lib/api"
-import type { Property, Showing } from "@/lib/data-store"
+import type { Property, Showing } from "@/lib/db"
 
 const TYPE_LABELS: Record<string, string> = {
   apartment: "Квартира",

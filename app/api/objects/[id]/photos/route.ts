@@ -1,5 +1,5 @@
 import { type NextRequest, NextResponse } from "next/server"
-import { getDataStore } from "@/lib/data-store"
+import { prisma } from "@/lib/prisma"
 
 export const runtime = "nodejs"
 
@@ -12,8 +12,9 @@ export async function POST(request: NextRequest, { params }: { params: { id: str
       return NextResponse.json({ error: "Фото не предоставлено" }, { status: 400 })
     }
 
-    const dataStore = getDataStore()
-    const property = dataStore.getProperty(params.id)
+    const property = await prisma.object.findUnique({
+      where: { id: params.id },
+    })
 
     if (!property) {
       return NextResponse.json({ error: "Объект не найден" }, { status: 404 })
@@ -22,9 +23,21 @@ export async function POST(request: NextRequest, { params }: { params: { id: str
     // In a real app, you would upload to cloud storage
     // For now, we'll just store a placeholder URL
     const photoUrl = `/uploads/${params.id}/${photo.name}`
-    const photos = [...(property.photos || []), photoUrl]
 
-    dataStore.updateProperty(params.id, { photos })
+    let photos = []
+    if (property.photos) {
+      try {
+        photos = JSON.parse(property.photos)
+      } catch (e) {
+        photos = []
+      }
+    }
+    photos.push(photoUrl)
+
+    await prisma.object.update({
+      where: { id: params.id },
+      data: { photos: JSON.stringify(photos) },
+    })
 
     return NextResponse.json({ photoUrl, message: "Фото успешно загружено" })
   } catch (error) {
@@ -41,15 +54,29 @@ export async function DELETE(request: NextRequest, { params }: { params: { id: s
       return NextResponse.json({ error: "Путь к фото не предоставлен" }, { status: 400 })
     }
 
-    const dataStore = getDataStore()
-    const property = dataStore.getProperty(params.id)
+    const property = await prisma.object.findUnique({
+      where: { id: params.id },
+    })
 
     if (!property) {
       return NextResponse.json({ error: "Объект не найден" }, { status: 404 })
     }
 
-    const photos = (property.photos || []).filter((p) => p !== photoPath)
-    dataStore.updateProperty(params.id, { photos })
+    let photos = []
+    if (property.photos) {
+      try {
+        photos = JSON.parse(property.photos)
+      } catch (e) {
+        photos = []
+      }
+    }
+
+    photos = photos.filter((p: string) => p !== photoPath)
+
+    await prisma.object.update({
+      where: { id: params.id },
+      data: { photos: JSON.stringify(photos) },
+    })
 
     return NextResponse.json({ message: "Фото успешно удалено" })
   } catch (error) {

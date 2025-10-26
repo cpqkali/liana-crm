@@ -1,5 +1,5 @@
 import { type NextRequest, NextResponse } from "next/server"
-import { getDataStore } from "@/lib/data-store"
+import { prisma } from "@/lib/prisma"
 
 export const runtime = "nodejs"
 
@@ -11,12 +11,13 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: "Не авторизован" }, { status: 401 })
     }
 
-    const dataStore = getDataStore()
     // Extract username from token (format: base64(username:timestamp))
     const decoded = Buffer.from(authToken, "base64").toString("utf-8")
     const [username] = decoded.split(":")
 
-    const user = dataStore.getUser(username)
+    const user = await prisma.user.findUnique({
+      where: { username },
+    })
 
     if (!user) {
       return NextResponse.json({ error: "Пользователь не найден" }, { status: 404 })
@@ -45,15 +46,13 @@ export async function PUT(request: NextRequest) {
     const decoded = Buffer.from(authToken, "base64").toString("utf-8")
     const [username] = decoded.split(":")
 
-    const dataStore = getDataStore()
-    const updatedUser = dataStore.updateUser(username, {
-      fullName: data.fullName,
-      email: data.email,
+    const updatedUser = await prisma.user.update({
+      where: { username },
+      data: {
+        fullName: data.fullName,
+        email: data.email,
+      },
     })
-
-    if (!updatedUser) {
-      return NextResponse.json({ error: "Пользователь не найден" }, { status: 404 })
-    }
 
     return NextResponse.json({
       username: updatedUser.username,

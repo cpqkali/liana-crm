@@ -17,7 +17,7 @@ import { Empty, EmptyContent, EmptyDescription, EmptyHeader, EmptyMedia, EmptyTi
 import { BuildingIcon, EyeIcon, PencilIcon, TrashIcon } from "lucide-react"
 import Link from "next/link"
 import { toast } from "sonner"
-import type { Property } from "@/lib/data-store"
+import type { Property } from "@/lib/db"
 
 interface PropertyListProps {
   filters: {

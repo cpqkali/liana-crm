@@ -1,4 +1,4 @@
-import type { Property, Client, Showing } from "@/lib/data-store"
+import type { Property, Client, Showing } from "@/lib/db"
 
 export function exportToCSV(data: any[], filename: string, columns: string[]) {
   const headers = columns.join(",")

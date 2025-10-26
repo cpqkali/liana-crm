@@ -4,7 +4,7 @@ import { useState, useEffect } from "react"
 import { Card, CardContent } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { BellIcon, XIcon } from "lucide-react"
-import type { Showing, Property } from "@/lib/data-store"
+import type { Showing, Property } from "@/lib/db"
 
 interface NotificationsPanelProps {
   showings: Showing[]

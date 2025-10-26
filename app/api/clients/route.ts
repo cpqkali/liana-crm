@@ -1,25 +1,14 @@
 import { type NextRequest, NextResponse } from "next/server"
-import { getDataStore } from "@/lib/data-store"
+import { prisma } from "@/lib/prisma"
+import { logAdminAction } from "@/lib/db"
 
 export const runtime = "nodejs"
 
 export async function GET(request: NextRequest) {
   try {
-    const searchParams = request.nextUrl.searchParams
-    const filters: any = {}
-
-    if (searchParams.get("waiting_for_showing") === "true") {
-      filters.waiting_for_showing = true
-    }
-    if (searchParams.get("is_hidden") === "true") {
-      filters.is_hidden = true
-    }
-    if (searchParams.get("id")) {
-      filters.id = Number.parseInt(searchParams.get("id")!)
-    }
-
-    const dataStore = getDataStore()
-    const clients = dataStore.getClients(filters)
+    const clients = await prisma.client.findMany({
+      orderBy: { createdAt: "desc" },
+    })
     return NextResponse.json(clients)
   } catch (error) {
     console.error("[v0] Get clients error:", error)
@@ -35,21 +24,25 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Имя и телефон обязательны" }, { status: 400 })
     }
 
-    const dataStore = getDataStore()
-    const newClient = dataStore.createClient({
-      name: data.name,
-      phone: data.phone,
-      callStatus: data.call_status || "not_called",
-      type: data.type || "buyer",
-      status: data.status || "active",
-      budget: data.budget,
-      notes: data.notes,
+    const clientId = `CLI-${String(Date.now()).slice(-6)}`
+
+    const newClient = await prisma.client.create({
+      data: {
+        id: clientId,
+        name: data.name,
+        phone: data.phone,
+        callStatus: data.callStatus || "not_called",
+        type: data.type || "buyer",
+        status: data.status || "active",
+        budget: data.budget || null,
+        notes: data.notes || null,
+      },
     })
 
     const username = request.headers.get("x-admin-username") || "Unknown"
     const ipAddress = request.headers.get("x-forwarded-for") || request.headers.get("x-real-ip") || "Unknown"
 
-    dataStore.logAdminAction({
+    await logAdminAction({
       adminUsername: username,
       action: "Создан клиент",
       details: `Клиент ${data.name} - ${data.phone}`,

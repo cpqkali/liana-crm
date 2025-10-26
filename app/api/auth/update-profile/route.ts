@@ -1,18 +1,21 @@
 import { type NextRequest, NextResponse } from "next/server"
-import { getDataStore } from "@/lib/data-store"
+import { prisma } from "@/lib/prisma"
+import bcryptjs from "bcryptjs"
+import { createAuthToken } from "@/lib/auth"
 
 export const runtime = "nodejs"
 
 export async function PUT(request: NextRequest) {
   try {
-    const { username, fullName, email, currentPassword, newPassword } = await request.json()
+    const { username, currentPassword, newPassword } = await request.json()
 
     if (!username) {
       return NextResponse.json({ error: "Имя пользователя обязательно" }, { status: 400 })
     }
 
-    const dataStore = getDataStore()
-    const user = dataStore.getUser(username)
+    const user = await prisma.user.findUnique({
+      where: { username },
+    })
 
     if (!user) {
       return NextResponse.json({ error: "Пользователь не найден" }, { status: 404 })
@@ -20,28 +23,35 @@ export async function PUT(request: NextRequest) {
 
     // Verify current password if changing password
     if (newPassword) {
-      if (!currentPassword || user.password !== currentPassword) {
+      if (!currentPassword) {
+        return NextResponse.json({ error: "Текущий пароль обязателен" }, { status: 400 })
+      }
+
+      const isValidPassword = await bcryptjs.compare(currentPassword, user.password)
+
+      if (!isValidPassword) {
         return NextResponse.json({ error: "Неверный текущий пароль" }, { status: 401 })
       }
     }
 
-    const updates: any = {}
-    if (fullName) updates.fullName = fullName
-    if (email) updates.email = email
-    if (newPassword) updates.password = newPassword
-
-    const updatedUser = dataStore.updateUser(username, updates)
-
-    if (!updatedUser) {
-      return NextResponse.json({ error: "Ошибка обновления профиля" }, { status: 500 })
+    const updateData: any = {}
+    if (newPassword) {
+      updateData.password = await bcryptjs.hash(newPassword, 10)
     }
+
+    const updatedUser = await prisma.user.update({
+      where: { username },
+      data: updateData,
+    })
+
+    const token = createAuthToken(updatedUser.id, updatedUser.username)
 
     return NextResponse.json({
       message: "Профиль успешно обновлен",
+      token,
       user: {
+        id: updatedUser.id,
         username: updatedUser.username,
-        fullName: updatedUser.fullName,
-        email: updatedUser.email,
       },
     })
   } catch (error) {

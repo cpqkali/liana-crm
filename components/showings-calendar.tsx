@@ -5,7 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { ChevronLeftIcon, ChevronRightIcon } from "lucide-react"
-import type { Showing, Property } from "@/lib/data-store"
+import type { Showing, Property } from "@/lib/db"
 
 interface ShowingsCalendarProps {
   showings: Showing[]

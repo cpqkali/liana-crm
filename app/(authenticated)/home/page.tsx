@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button"
 import { useEffect, useState } from "react"
 import { toast } from "sonner"
 import { NotificationsPanel } from "@/components/notifications-panel"
-import type { Property, Client, Showing } from "@/lib/data-store"
+import type { Property, Client, Showing } from "@/lib/db"
 
 export default function HomePage() {
   const [stats, setStats] = useState({
